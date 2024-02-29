@@ -66,13 +66,10 @@ void imageFilterMean(unsigned char *src1, unsigned char *src2, unsigned char *ds
     }
 #elif defined(USE_X86_GFX)
 
-#ifndef MACOSX
     if (cpufuncs & CPUF_X86_SSE2) {
-#endif // !MACOSX
 
         imageFilterMean_SSE2(src1, src2, dst, length);
 
-#ifndef MACOSX
     } else if (cpufuncs & CPUF_X86_MMX) {
 
         imageFilterMean_MMX(src1, src2, dst, length);
@@ -81,7 +78,6 @@ void imageFilterMean(unsigned char *src1, unsigned char *src2, unsigned char *ds
         int n = length + 1;
         BASIC_MEAN();
     }
-#endif // !MACOSX
 
 #else // no special gfx handling
     int n = length + 1;
@@ -100,13 +96,10 @@ void imageFilterAddTo(unsigned char *dst, unsigned char *src, int length)
     }
 #elif defined(USE_X86_GFX)
 
-#ifndef MACOSX
     if (cpufuncs & CPUF_X86_SSE2) {
-#endif // !MACOSX
 
         imageFilterAddTo_SSE2(dst, src, length);
 
-#ifndef MACOSX
     } else if (cpufuncs & CPUF_X86_MMX) {
 
         imageFilterAddTo_MMX(dst, src, length);
@@ -115,7 +108,6 @@ void imageFilterAddTo(unsigned char *dst, unsigned char *src, int length)
         int n = length + 1;
         BASIC_ADDTO();
     }
-#endif // !MACOSX
 
 #else // no special gfx handling
     int n = length + 1;
@@ -134,13 +126,10 @@ void imageFilterSubFrom(unsigned char *dst, unsigned char *src, int length)
     }
 #elif defined(USE_X86_GFX)
 
-#ifndef MACOSX
     if (cpufuncs & CPUF_X86_SSE2) {
-#endif // !MACOSX
 
         imageFilterSubFrom_SSE2(dst, src, length);
 
-#ifndef MACOSX
     } else if (cpufuncs & CPUF_X86_MMX) {
 
         imageFilterSubFrom_MMX(dst, src, length);
@@ -149,7 +138,6 @@ void imageFilterSubFrom(unsigned char *dst, unsigned char *src, int length)
         int n = length + 1;
         BASIC_SUBFROM();
     }
-#endif // !MACOSX
 
 #else // no special gfx handling
     int n = length + 1;
@@ -161,18 +149,14 @@ void imageFilterBlend(Uint32 *dst_buffer, Uint32 *src_buffer,
                                      Uint8 *alphap, int alpha, int length)
 {
 #if defined(USE_X86_GFX)
-#ifndef MACOSX
     if (cpufuncs & CPUF_X86_SSE2) {
-#endif // !MACOSX
 
         imageFilterBlend_SSE2(dst_buffer, src_buffer, alphap, alpha, length);
 
-#ifndef MACOSX
     } else {
         int n = length + 1;
         BASIC_BLEND();
     }
-#endif // !MACOSX
 
 #else // no special gfx handling
     int n = length + 1;
@@ -184,13 +168,10 @@ void imageFilterEffectBlend(Uint32 *dst_buffer, Uint32 *src1_buffer,
                                            Uint32 *src2_buffer, Uint32 mask2, int length)
 {
 #if defined(USE_X86_GFX)
-#ifndef MACOSX
     if (cpufuncs & CPUF_X86_SSE2) {
-#endif // !MACOSX
 
         imageFilterEffectBlend_SSE2(dst_buffer, src1_buffer, src2_buffer, mask2, length);
 
-#ifndef MACOSX
     } else {
         int n = length + 1;
         while(--n > 0) {
@@ -198,7 +179,6 @@ void imageFilterEffectBlend(Uint32 *dst_buffer, Uint32 *src1_buffer,
             ++dst_buffer, ++src1_buffer, ++src2_buffer;
         }
     }
-#endif // !MACOSX
 
 #else // no special gfx handling
     int n = length + 1;
@@ -215,14 +195,11 @@ void imageFilterEffectMaskBlend(Uint32 *dst_buffer, Uint32 *src1_buffer,
                                                int length)
 {
 #if defined(USE_X86_GFX)
-#ifndef MACOSX
     if (cpufuncs & CPUF_X86_SSE2) {
-#endif // !MACOSX
 
         imageFilterEffectMaskBlend_SSE2(dst_buffer, src1_buffer, src2_buffer,
                                         mask_buffer, overflow_mask, mask_value, length);
 
-#ifndef MACOSX
     } else {
         int n = length + 1;
         while(--n > 0) {
@@ -230,7 +207,6 @@ void imageFilterEffectMaskBlend(Uint32 *dst_buffer, Uint32 *src1_buffer,
             ++dst_buffer, ++src1_buffer, ++src2_buffer, ++mask_buffer;
         }
     }
-#endif // !MACOSX
 
 #else // no special gfx handling
     int n = length + 1;

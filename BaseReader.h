@@ -35,11 +35,7 @@
 #define SEEK_END 2
 #endif
 
-#ifdef WIN32
-#define DELIMITER '\\'
-#else
 #define DELIMITER '/'
-#endif
 
 #define MAX_ERRBUF_LEN 512
 

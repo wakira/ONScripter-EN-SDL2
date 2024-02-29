@@ -126,14 +126,6 @@ public:
     void setSavePath(const char *path);
     void setNsaOffset(const char *off);
 
-#ifdef MACOSX
-    void checkBundled();
-    bool isBundled() {return is_bundled; }
-    char *bundleResPath() { return bundle_res_path; }
-    char *bundleAppPath() { return bundle_app_path; }
-    char *bundleAppName() { return bundle_app_name; }
-#endif
-
     /* Command */
     int zenkakkoCommand();
     int windowchipCommand();
@@ -318,12 +310,6 @@ protected:
     int current_mode;
     int debug_level;
 
-#ifdef MACOSX
-    bool is_bundled;
-    char *bundle_res_path;
-    char *bundle_app_path;
-    char *bundle_app_name;
-#endif
     char *cmdline_game_id;
     DirPaths archive_path;
     DirPaths nsa_path;

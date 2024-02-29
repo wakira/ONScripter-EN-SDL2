@@ -29,13 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef WIN32
-#define DELIMITER '\\'
-#define PATH_DELIMITER ';'
-#else
 #define DELIMITER '/'
 #define PATH_DELIMITER ':'
-#endif
 
 
 class DirPaths

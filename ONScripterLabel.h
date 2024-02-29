@@ -84,8 +84,6 @@
 #define FONT_ARCHIVE_TTC 5
 #define FONT_ARCHIVE_OTF 6
 #define FONT_ARCHIVE_OTC 7
-#define FONT_WIN32_MSGOTHIC_TTC 8
-#define FONT_WIN32_MSGOTHIC_TTF 9
 #define FONT_MACOS_HIRAGINO 10
 
 #if defined(PDA) && !defined(PSP)
@@ -127,9 +125,6 @@ public:
     void setWindowMode();
 #ifndef NO_LAYER_EFFECTS
     void setNoLayers();
-#endif
-#ifdef WIN32
-    void setUserAppData();
 #endif
     void setUseAppIcons();
     void setIgnoreTextgosubNewline();
@@ -178,9 +173,6 @@ public:
 
     //Mion: routines for error handling & cleanup
     bool doErrorBox( const char *title, const char *errstr, bool is_simple=false, bool is_warning=false );
-#ifdef WIN32
-    void openDebugFolders();
-#endif
     /* ---------------------------------------- */
     /* Commands */
     int yesnoboxCommand();
@@ -411,9 +403,6 @@ protected:
     bool key_pressed_flag;
     int  shift_pressed_status;
     int  ctrl_pressed_status;
-#ifdef MACOSX
-    int apple_pressed_status;
-#endif
     bool bgmdownmode_flag;
     // the default behavior when in "click to skip" mode is to stop
     // the skip at the next clickwait or newline, whichever comes first.
@@ -553,9 +542,6 @@ private:
     bool fullscreen_mode;
     bool window_mode; //ons-specific, for cmd-line option --window
     int fileversion;
-#ifdef WIN32
-    bool current_user_appdata;
-#endif
     bool use_app_icons;
 
     bool btntime2_flag;

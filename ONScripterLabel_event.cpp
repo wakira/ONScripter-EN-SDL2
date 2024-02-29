@@ -39,10 +39,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
-#ifdef WIN32
-#include <windows.h>
-#include "SDL_syswm.h"
-#endif
 
 #define ONS_TIMER_EVENT    (SDL_USEREVENT)
 #define ONS_SOUND_EVENT    (SDL_USEREVENT+1)
@@ -73,9 +69,6 @@ SDL_TimerID timer_silentmovie_id = NULL;
 // The reason we have a separate midi loop timer id here is that on Mac OS X, looping midis via SDL will cause SDL itself
 // to hard crash after the first play.  So, we work around that by manually causing the midis to loop.  This OS X midi
 // workaround is the work of Ben Carter.  Recommend for integration.  [Seung Park, 20060621]
-#ifdef MACOSX
-SDL_TimerID timer_seqmusic_id = NULL;
-#endif
 bool ext_music_play_once_flag = false;
 
 static inline void clearTimer(SDL_TimerID &timer_id)
@@ -175,19 +168,6 @@ extern "C" Uint32 SDLCALL silentmovieCallback( Uint32 interval, void *param )
 
     return interval;
 }
-
-// Pushes the midi loop event onto the stack.  Part of a workaround for ONScripter
-// crashing in Mac OS X after a midi is looped for the first time.  Recommend for
-// integration.  This is the work of Ben Carter.  [Seung Park, 20060621]
-#if defined(MACOSX)
-extern "C" Uint32 seqmusicSDLCallback( Uint32 interval, void *param )
-{
-	SDL_Event event;
-	event.type = ONS_SEQMUSIC_EVENT;
-	SDL_PushEvent( &event );
-	return interval;
-}
-#endif
 
 void seqmusicCallback( int sig )
 {
@@ -426,18 +406,9 @@ void ONScripterLabel::flushEventSub( SDL_Event &event )
         }
     }
     else if ( event.type == ONS_SEQMUSIC_EVENT ){
-#if defined(MACOSX) //insani
-        if (!Mix_PlayingMusic())
-        {
-            ext_music_play_once_flag = !seqmusic_play_loop_flag;
-            Mix_FreeMusic( seqmusic_info );
-            playSequencedMusic(seqmusic_play_loop_flag);
-        }
-#else
         ext_music_play_once_flag = !seqmusic_play_loop_flag;
         Mix_FreeMusic( seqmusic_info );
         playSequencedMusic(seqmusic_play_loop_flag);
-#endif
     }
     else if ( event.type == ONS_MUSIC_EVENT ){
         ext_music_play_once_flag = !music_play_loop_flag;
@@ -1004,14 +975,6 @@ bool ONScripterLabel::keyDownEvent( SDL_KeyboardEvent *event )
       case SDLK_LSHIFT:
         shift_pressed_status |= 0x02;
         break;
-#ifdef MACOSX
-      case SDLK_LMETA:
-        apple_pressed_status |= 1;
-        break;
-      case SDLK_RMETA:
-        apple_pressed_status |= 1;
-        break;
-#endif
       default:
         break;
     }
@@ -1037,14 +1000,6 @@ void ONScripterLabel::keyUpEvent( SDL_KeyboardEvent *event )
       case SDLK_LSHIFT:
         shift_pressed_status &= ~0x02;
         break;
-#ifdef MACOSX
-      case SDLK_LMETA:
-        apple_pressed_status &= ~1;
-        break;
-      case SDLK_RMETA:
-        apple_pressed_status &= ~2;
-        break;
-#endif
       default:
         break;
     }
@@ -1124,9 +1079,6 @@ bool ONScripterLabel::keyPressEvent( SDL_KeyboardEvent *event )
 
     //Shift-'q' is for Quit
     if (((shift_pressed_status && (event->keysym.sym == SDLK_q)) 
-#ifdef MACOSX
-        || (apple_pressed_status && (event->keysym.sym == SDLK_q)) 
-#endif
        ) && (current_mode == NORMAL_MODE)) {
 
         endCommand();
@@ -1417,22 +1369,6 @@ bool ONScripterLabel::keyPressEvent( SDL_KeyboardEvent *event )
         skip_mode |= (SKIP_TO_WAIT | SKIP_TO_EOL);
         key_pressed_flag = true;
     }
-
-#if defined(WIN32) && defined(USE_MESSAGEBOX)
-    if ((event->keysym.sym == SDLK_F1) && (version_str != NULL)){
-        //F1 is for Help (on Windows), so show the About dialog box
-        menu_windowCommand();
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        HWND pwin = NULL;
-        if (SDL_GetWMInfo(&info) == 1)
-            pwin = info.window;
-        MessageBox(pwin, version_str, "About",
-                   MB_OK|MB_ICONINFORMATION);
-
-        key_pressed_flag = true;
-    }
-#endif
 
     return false;
 }

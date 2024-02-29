@@ -42,28 +42,15 @@ static void optionHelp()
     printf( "Usage: onscripter [option ...]\n" );
     printf( "      --cdaudio\t\tuse CD audio if available\n");
     printf( "      --cdnumber no\tchoose the CD-ROM drive number\n");
-#ifdef WIN32
-    printf( "      --waveout-audio\tuse the Windows waveout audio driver (instead of Direct Sound)\n");
-#endif
     printf( "      --match-audiodevice-to-bgm\treset audio to match bgm specs\n");
     printf( "      --nomatch-audiodevice-to-bgm\tdon't reset audio to match bgm specs (default)\n");
     printf( "  -f, --font file\tset a TTF, OTF, TTC, or OTC font file\n");
     printf( "      --registry file\tset a registry file\n");
-#ifdef WIN32
-    printf( "      --dll file\tset a dll file\n");
-#endif
     printf( "      --english\t\tset preferred text mode to English (default)\n");
     printf( "      --japanese\tset preferred text mode to Japanese\n");
     printf( "      --english-menu\tuse English system menu messages (default)\n");
     printf( "      --japanese-menu\tuse Japanese system menu messages\n");
-#if   defined WIN32
-    printf( "  -r, --root path\tset the root path to the archives\n");
-    printf( "  -s, --save path\tset the path to use for saved games (default: folder in All Users profile)\n");
-    printf( "      --current-user-appdata\tuse the current user's AppData folder instead of AllUsers' AppData\n");
-#elif defined MACOSX
-    printf( "  -r, --root path\tset the root path to the archives (default: Resources in ONScripter bundle)\n");
-    printf( "  -s, --save path\tset the path to use for saved games (default: folder in ~/Library/Application Support)\n");
-#elif defined LINUX
+#if defined LINUX
     printf( "  -r, --root path\tset the root path to the archives\n");
     printf( "  -s, --save path\tset the path to use for saved games (default: hidden subdirectory in ~)\n");
 #else
@@ -150,11 +137,6 @@ static void parseOptions(int argc, char **argv, ONScripterLabel &ons, bool &hasA
                 argv++;
                 ons.setCDNumber(atoi(argv[0]));
             }
-#ifdef WIN32
-            else if ( !strcmp( argv[0]+1, "-waveout-audio" ) ){
-                ons.setAudiodriver("waveout");
-            }
-#endif
             else if ( !strcmp( argv[0]+1, "-audiodriver" ) ){
                 argc--;
                 argv++;
@@ -209,11 +191,6 @@ static void parseOptions(int argc, char **argv, ONScripterLabel &ons, bool &hasA
                 argv++;
                 ons.setSavePath(argv[0]);
             }
-#ifdef WIN32
-            else if ( !strcmp( argv[0]+1, "-current-user-appdata" ) ){
-                ons.setUserAppData();
-            }
-#endif
             else if ( !strcmp( argv[0]+1, "-use-app-icons" ) ){
                 ons.setUseAppIcons();
             }
@@ -435,30 +412,9 @@ int main( int argc, char **argv )
     ons.enableButtonShortCut();
 #endif
 
-#ifdef MACOSX
-    //Check for application bundle on Mac OS X
-    ons.checkBundled();
-#endif
-
     // ----------------------------------------
     // Parse options
     bool hasArchivePath = false;
-#ifdef MACOSX
-    if (ons.isBundled()) {
-        const int maxpath=32768;
-        char cfgpath[maxpath];
-        char *tmp = ons.bundleResPath();
-        if (tmp) {
-            sprintf(cfgpath, "%s/%s", tmp, CFG_FILE);
-            parseOptionFile(cfgpath, ons, hasArchivePath);
-        }
-        tmp = ons.bundleAppPath();
-        if (tmp) {
-            sprintf(cfgpath, "%s/%s", tmp, CFG_FILE);
-            parseOptionFile(cfgpath, ons, hasArchivePath);
-        }
-    } else
-#endif
     parseOptionFile(CFG_FILE, ons, hasArchivePath);
     parseOptions(argc, argv, ons, hasArchivePath);
 

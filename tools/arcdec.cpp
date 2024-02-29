@@ -36,10 +36,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#ifdef WIN32
-#include <direct.h>
-#include <windows.h>
-#endif
 
 #ifdef SAR
 #include "SarReader.h"
@@ -146,9 +142,7 @@ int main( int argc, char **argv )
                 /* If the directory doesn't exist, create it */
                 if ( stat ( dir_name, &file_stat ) == -1 && errno == ENOENT )
                     mkdir(dir_name
-#ifndef WIN32
                           , 0755
-#endif
                          );
             }
         }

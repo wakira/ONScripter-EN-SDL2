@@ -32,26 +32,17 @@
 
 #include "DirectReader.h"
 #include <bzlib.h>
-#if !defined(WIN32) && !defined(MACOS9) && !defined(PSP) && !defined(__OS2__)
+#if !defined(PSP) && !defined(__OS2__)
 #include <dirent.h>
 #endif
 
 #define IS_TWO_BYTE(x) \
         ( ((x) & 0xe0) == 0xe0 || ((x) & 0xe0) == 0x80 )
 
-#ifdef WIN32
-//Mion: support for non-ASCII (SJIS) filenames
-#include <wchar.h>
-#endif
-
-#if defined(MACOSX) || defined(LINUX) || defined(UTF8_FILESYSTEM)
+#if defined(LINUX) || defined(UTF8_FILESYSTEM)
 #define RECODING_FILENAMES
-#ifdef MACOSX
-#include "cocoa_encoding.h"
-#else //!MACOSX
 extern unsigned short convSJIS2UTF16( unsigned short in );
 extern int convUTF16ToUTF8( unsigned char dst[4], unsigned short src );
-#endif
 #endif
 
 #ifndef SEEK_END
@@ -149,28 +140,9 @@ FILE *DirectReader::fopen(const char *path, const char *mode)
         fp = ::fopen( file_full_path, mode );
         //printf("%s\n", fp ? "found" : "not found");
         if (fp) return fp;
-#ifdef WIN32
-        // Windows uses UTF-16, so convert for Japanese characters
-        else if (hasTwoByteChar(file_full_path)) {
-            wchar_t *u16_tmp, *umode;
-            //convert the file path to from Shift-JIS to Wide chars (Unicode)
-            int wc_size = MultiByteToWideChar(932, 0, file_full_path, -1, NULL, 0);
-            u16_tmp = new wchar_t[wc_size];
-            MultiByteToWideChar(932, 0, file_full_path, -1, u16_tmp, wc_size);
-            //need to convert the file mode too
-            wc_size = MultiByteToWideChar(932, 0, mode, -1, NULL, 0);
-            umode = new wchar_t[wc_size];
-            MultiByteToWideChar(932, 0, mode, -1, umode, wc_size);
-            fp = _wfopen( u16_tmp, umode );
-            //printf("checking utf16 filename: %s\n", fp ? "found" : "not found");
-            delete[] u16_tmp;
-            delete[] umode;
-            if (fp) return fp;
-        }
-#endif
     }
 
-#if !defined(WIN32) && !defined(MACOS9) && !defined(PSP) && !defined(__OS2__)
+#if !defined(PSP) && !defined(__OS2__)
     // If the file wasn't found, try a case-insensitive search.
     char *cur_p = NULL;
     DIR *dp = NULL;
@@ -511,9 +483,6 @@ void DirectReader::convertFromSJISToEUC( char *buf )
 void DirectReader::convertFromSJISToUTF8( char *dst_buf, const char *src_buf )
 {
 #if defined(RECODING_FILENAMES) || defined(UTF8_FILESYSTEM)
-#if defined(MACOSX)
-    ONSCocoa::sjis_to_utf8(dst_buf, src_buf);
-#else
     //Mion: ogapee 20100711a
     int i, c;
     unsigned short unicode;
@@ -533,15 +502,7 @@ void DirectReader::convertFromSJISToUTF8( char *dst_buf, const char *src_buf )
         }
     }
     *dst_buf++ = 0;
-#endif //MACOSX
-#elif defined(WIN32)
-    int wc_size = MultiByteToWideChar(932, 0, src_buf, -1, NULL, 0);
-    wchar_t *u16_tmp = new wchar_t[wc_size];
-    MultiByteToWideChar(932, 0, src_buf, -1, u16_tmp, wc_size);
-    int mb_size = WideCharToMultiByte(CP_UTF8, 0, u16_tmp, wc_size, dst_buf, 0, NULL, NULL);
-    WideCharToMultiByte(CP_UTF8, 0, u16_tmp, wc_size, dst_buf, mb_size, NULL, NULL);
-    delete[] u16_tmp;
-#endif //RECODING_FILENAMES || UTF8_FILESYSTEM, WIN32
+#endif //RECODING_FILENAMES || UTF8_FILESYSTEM
 }
 
 size_t DirectReader::decodeNBZ( FILE *fp, size_t offset, unsigned char *buf )

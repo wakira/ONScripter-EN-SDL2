@@ -42,18 +42,6 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef WIN32
-#include <direct.h>
-#include <windows.h>
-#include "SDL_syswm.h"
-#endif
-
-#ifdef MACOSX
-#include "cocoa_url.h"
-#include "cocoa_encoding.h"
-#include "cocoa_alertbox.h"
-#endif
-
 #ifdef LINUX
 #include <sys/wait.h>
 #include <unistd.h>
@@ -99,27 +87,7 @@ int ONScripterLabel::yesnoboxCommand()
         //The OS X dialog box routines are crashing when in fullscreen mode,
         //so let's switch to windowed mode just in case
         menu_windowCommand();
-#if defined(MACOSX)
-        bool selectedYes;
-        if(is_yesnobox) {
-            selectedYes = ONSCocoa::choicebox(title, msg, "Yes", "No", ONSCocoa::ENC_SJIS);
-        } else {
-            selectedYes = ONSCocoa::choicebox(title, msg, "OK", "Cancel", ONSCocoa::ENC_SJIS);
-        }
-
-        res = selectedYes ? 1 : 0;
-#elif defined(WIN32) && defined(USE_MESSAGEBOX)
-        UINT mb_type = MB_OKCANCEL;
-        if (is_yesnobox)
-            mb_type = MB_YESNO;
-        HWND pwin = NULL;
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        if (SDL_GetWMInfo(&info) == 1)
-            pwin = info.window;
-        res = MessageBox(pwin, msg, title, mb_type);
-        res = ((res == IDYES) || (res == IDOK)) ? 1 : 0;
-#elif defined(LINUX)
+#if defined(LINUX)
         strncat(msg, "\n", 1); // This is used in order to prevent a... wierd... bug -Galladite 2023-4-10
 
         res = message_main(is_yesnobox, (char *)title, (char *)msg);
@@ -793,23 +761,7 @@ int tryToLaunch(const char* command, const char* target)
 
 int ONScripterLabel::shellCommand()
 {
-#ifdef WIN32
-    const char *url = script_h.readStr();
-    HMODULE shdll = LoadLibrary("shell32");
-    if (shdll) {
-        typedef HINSTANCE (WINAPI *SHELLEXECUTE)(HWND, LPCSTR, LPCSTR, LPCSTR,
-						 LPCSTR, int);
-        SHELLEXECUTE shexec =
-	    SHELLEXECUTE(GetProcAddress(shdll, "ShellExecuteA"));
-        if (shexec) {
-            shexec(NULL, "open", url, NULL, NULL, SW_SHOW);
-        }
-        FreeLibrary(shdll);
-    }
-    
-#elif defined MACOSX
-    ONSCocoa::open_url(script_h.readStr(), ONSCocoa::ENC_SJIS);
-#elif defined LINUX
+#if defined LINUX
     // Linux/BSD/other Unixes don't provide standard APIs for this
     // kind of thing, but there are various things we can try.
     
@@ -1329,9 +1281,7 @@ int ONScripterLabel::savescreenshotCommand()
         if (last_delim) {
             filename[last_delim] = 0;
             mkdir(filename
-#ifndef WIN32
                   , 0755
-#endif
                  );
             filename[last_delim] = DELIMITER;
         }
@@ -1957,20 +1907,6 @@ int ONScripterLabel::mesboxCommand()
     char *msg = new char[strlen(buf)+1];
     sprintf(msg,"%s",buf);
     const char *title = script_h.readStr();
-#if defined(MACOSX)
-    //The OS X dialog box routines are crashing when in fullscreen mode,
-    //so let's switch to windowed mode just in case
-    menu_windowCommand();
-    ONSCocoa::alertbox(title, msg);
-#elif defined(WIN32) && defined(USE_MESSAGEBOX)
-    menu_windowCommand();
-    HWND pwin = NULL;
-    SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    if (SDL_GetWMInfo(&info) == 1)
-        pwin = info.window;
-    MessageBox(pwin, msg, title, MB_OK);
-#endif
     fprintf(stderr,"Got message box '%s': '%s'\n", title, msg);
     delete[] msg;
 
@@ -4100,23 +4036,6 @@ int ONScripterLabel::captionCommand()
     delete[] buf2;
     //printf("caption (utf8): '%s'\n", wm_title_string);
     SDL_WM_SetCaption( wm_title_string, wm_icon_string );
-#ifdef WIN32
-    //convert from UTF-8 to Wide (Unicode) and thence to system ANSI
-    len = MultiByteToWideChar(CP_UTF8, 0, wm_title_string, -1, NULL, 0);
-    wchar_t *u16_tmp = new wchar_t[len];
-    MultiByteToWideChar(CP_UTF8, 0, wm_title_string, -1, u16_tmp, len);
-    len = WideCharToMultiByte(CP_ACP, 0, u16_tmp, -1, NULL, 0, NULL, NULL);
-    char *cvt = new char[len+1];
-    WideCharToMultiByte(CP_ACP, 0, u16_tmp, -1, cvt, len, NULL, NULL);
-    delete[] u16_tmp;
-
-    //set the window caption directly
-    SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    SDL_GetWMInfo(&info);
-    SendMessageA(info.window, WM_SETTEXT, 0, (LPARAM)cvt);
-    delete[] cvt;
-#endif //WIN32
 
     return RET_CONTINUE;
 }

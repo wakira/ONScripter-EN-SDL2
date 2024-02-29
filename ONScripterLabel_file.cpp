@@ -37,17 +37,11 @@
 
 #include "ONScripterLabel.h"
 
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
-#elif defined(WIN32)
-#include <windows.h>
-#elif defined(MACOS9)
-#include <DateTimeUtils.h>
-#include <Files.h>
-extern "C" void c2pstrcpy(Str255 dst, const char *src);	//#include <TextUtils.h>
 #elif defined(PSP)
 #include <pspiofilemgr.h>
 #endif
@@ -66,7 +60,7 @@ void ONScripterLabel::searchSaveFile( SaveFileInfo &save_file_info, int no )
     script_h.getStringFromInteger( save_file_info.sjis_no, no,
                                   (num_save_file >= 10)?2:1,
                                   false, use_fullwidth );
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX)
     if (script_h.savedir)
         sprintf( file_name, "%ssave%d.dat", script_h.savedir, no );
     else
@@ -84,58 +78,6 @@ void ONScripterLabel::searchSaveFile( SaveFileInfo &save_file_info, int no )
     save_file_info.day    = tm->tm_mday;
     save_file_info.hour   = tm->tm_hour;
     save_file_info.minute = tm->tm_min;
-#elif defined(WIN32)
-    if (script_h.savedir)
-        sprintf( file_name, "%ssave%d.dat", script_h.savedir, no );
-    else
-        sprintf( file_name, "%ssave%d.dat", script_h.save_path, no );
-    HANDLE  handle;
-    FILETIME    tm, ltm;
-    SYSTEMTIME  stm;
-
-    handle = CreateFile( file_name, GENERIC_READ, 0, NULL,
-                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL );
-    if ( handle == INVALID_HANDLE_VALUE ){
-        save_file_info.valid = false;
-        return;
-    }
-
-    GetFileTime( handle, NULL, NULL, &tm );
-    FileTimeToLocalFileTime( &tm, &ltm );
-    FileTimeToSystemTime( &ltm, &stm );
-    CloseHandle( handle );
-
-    save_file_info.month  = stm.wMonth;
-    save_file_info.day    = stm.wDay;
-    save_file_info.hour   = stm.wHour;
-    save_file_info.minute = stm.wMinute;
-#elif defined(MACOS9)
-    if (script_h.savedir)
-        sprintf( file_name, "%ssave%d.dat", script_h.savedir, no );
-    else
-        sprintf( file_name, "%ssave%d.dat", script_h.save_path, no );
-	CInfoPBRec  pb;
-	Str255      p_file_name;
-	FSSpec      file_spec;
-	DateTimeRec tm;
-	c2pstrcpy( p_file_name, file_name );
-	if ( FSMakeFSSpec(0, 0, p_file_name, &file_spec) != noErr ){
-		save_file_info.valid = false;
-		return;
-	}
-	pb.hFileInfo.ioNamePtr = file_spec.name;
-	pb.hFileInfo.ioVRefNum = file_spec.vRefNum;
-	pb.hFileInfo.ioFDirIndex = 0;
-	pb.hFileInfo.ioDirID = file_spec.parID;
-	if (PBGetCatInfoSync(&pb) != noErr) {
-		save_file_info.valid = false;
-		return;
-	}
-	SecondsToDate( pb.hFileInfo.ioFlMdDat, &tm );
-	save_file_info.month  = tm.month;
-	save_file_info.day    = tm.day;
-	save_file_info.hour   = tm.hour;
-	save_file_info.minute = tm.minute;
 #elif defined(PSP)
     if (script_h.savedir)
         sprintf( file_name, "%ssave%d.dat", script_h.savedir, no );

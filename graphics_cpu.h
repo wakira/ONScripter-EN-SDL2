@@ -27,7 +27,7 @@
 
 #include "graphics_common.h"
 
-#if defined (USE_X86_GFX) && !defined(MACOSX)
+#if defined (USE_X86_GFX)
 #include <cpuid.h>
 #endif
 

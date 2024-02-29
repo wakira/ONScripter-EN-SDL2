@@ -45,14 +45,6 @@
 #include "ScriptParser.h"
 #include "Encoding.h"
 
-#ifdef MACOSX
-#include "cocoa_bundle.h"
-#include "cocoa_alertbox.h"
-#endif
-#ifdef WIN32
-#include <windows.h>
-#endif
-
 #define VERSION_STR1 "ONScripter-EN"
 #define VERSION_STR2 "Copyright (C) 2001-2010 Studio O.G.A., 2007-2010 \"Uncle\" Mion Sonozaki. All Rights Reserved."
 
@@ -200,9 +192,6 @@ static struct FuncHash{
 ScriptParser::ScriptParser()
 //Using an initialization list to make sure pointers start out NULL
 :
-#ifdef MACOSX
-  bundle_res_path(NULL), bundle_app_path(NULL), bundle_app_name(NULL),
-#endif
   cmdline_game_id(NULL), last_nest_info(NULL), version_str(NULL),
   savedir(NULL), last_effect_link(NULL),
 #ifndef NO_LAYER_EFFECTS
@@ -221,9 +210,6 @@ ScriptParser::ScriptParser()
     srand( time(NULL) );
     rand();
 
-#ifdef MACOSX
-    is_bundled = false;
-#endif
     nsa_offset = 0;
     force_button_shortcut_flag = false;
     
@@ -300,11 +286,6 @@ ScriptParser::~ScriptParser()
     if (start_kinsoku) delete[] start_kinsoku;
     if (end_kinsoku) delete[] end_kinsoku;
 
-#ifdef MACOSX
-    if (bundle_res_path) delete[] bundle_res_path;
-    if (bundle_app_path) delete[] bundle_app_path;
-    if (bundle_app_name) delete[] bundle_app_name;
-#endif
     if (cmdline_game_id) delete[] cmdline_game_id;
     if (savedir) delete[] savedir;
 }
@@ -554,17 +535,6 @@ int ScriptParser::open_screen()
 
     return 0;
 }
-
-#ifdef MACOSX
-void ScriptParser::checkBundled()
-{
-    // check whether this onscripter is bundled, and if so find the
-    // resources and app directories
-    
-    ONSCocoa::getBundleInfo(&bundle_res_path, &bundle_app_path, &bundle_app_name);
-    is_bundled = true; // always bundled on OS X
-}
-#endif
 
 unsigned char ScriptParser::convHexToDec( char ch )
 {

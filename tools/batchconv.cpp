@@ -34,17 +34,10 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
-#ifdef WIN32
-#include <windows.h>
-#endif
 
 #include <regex.h>
 
-#ifdef WIN32
-#define DELIMITER '\\'
-#else
 #define DELIMITER '/'
-#endif
 
 extern int scale_ratio_upper;
 extern int scale_ratio_lower;
@@ -188,11 +181,7 @@ int processFile(char *fullname, char *name, char *outname )
 
             /* If the directory doesn't exist, create it */
             if ( stat ( dir_name, &file_stat ) == -1 && errno == ENOENT )
-#ifdef WIN32
-                CreateDirectory(dir_name, 0);
-#else
                 mkdir( dir_name, 00755 );
-#endif
         }
     }
 

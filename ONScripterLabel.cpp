@@ -44,37 +44,14 @@
 #include <cstdio>
 #include <fstream>
 
-#ifdef MACOSX
-#include "cocoa_alertbox.h"
-#include "cocoa_directories.h"
-#import <CoreFoundation/CoreFoundation.h>
-#import <Foundation/NSString.h>
-#import <Foundation/NSObject.h>
-#import <Foundation/NSFileManager.h>
 
-#ifdef USE_PPC_GFX
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#endif // USE_PPC_GFX
-
-#endif // MACOSX
-
-
-#ifdef WIN32
-#include <windows.h>
-#include "SDL_syswm.h"
-#include "winres.h"
-typedef HRESULT (WINAPI *GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPTSTR);
-#endif
 #ifdef LINUX
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
 #endif
-#if !defined(WIN32) && !defined(MACOSX)
 #include "resources.h"
-#endif
 
 extern void initSJIS2UTF16();
 extern "C" void waveCallback( int channel );
@@ -400,18 +377,7 @@ void ONScripterLabel::initSDL()
     //(cmd-line option --use-app-icons to prefer app resources over icon.png)
     //(Mac apps can set use-app-icons in a ons.cfg file within the
     //bundle, to have it always use the bundle icns)
-#ifndef MACOSX
     if (!icon || use_app_icons) {
-#ifdef WIN32
-        //use the (first) Windows icon resource
-        HICON wicon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(ONSCRICON));
-        if (wicon) {
-            SDL_SysWMinfo info;
-            SDL_VERSION(&info.version);
-            SDL_GetWMInfo(&info);
-            SendMessage(info.window, WM_SETICON, ICON_BIG, (LPARAM)wicon);
-        }
-#else
         //backport from ponscripter
         const InternalResource* internal_icon = getResource("icon.png");
         if (internal_icon) {
@@ -421,39 +387,9 @@ void ONScripterLabel::initSDL()
             icon = IMG_Load_RW(rwicon, 0);
             use_app_icons = false;
         }
-#endif //WIN32
     }
-#endif //!MACOSX
     // If an icon was found (and desired), use it.
     if (icon && !use_app_icons) {
-#if defined(MACOSX) || defined(WIN32)
-#if defined(MACOSX)
-        //resize the (usually 32x32) icon to 128x128
-        SDL_Surface *tmp2 = SDL_CreateRGBSurface(SDL_SWSURFACE, 128, 128,
-                                                 32, 0x00ff0000, 0x0000ff00,
-                                                 0x000000ff, 0xff000000);
-#elif defined(WIN32)
-        //resize the icon to 32x32
-        SDL_Surface *tmp2 = SDL_CreateRGBSurface(SDL_SWSURFACE, 32, 32,
-                                                 32, 0x00ff0000, 0x0000ff00,
-                                                 0x000000ff, 0xff000000);
-#endif //MACOSX, WIN32
-        SDL_Surface *tmp = SDL_ConvertSurface( icon, tmp2->format, SDL_SWSURFACE );
-        if ((tmp->w == tmp2->w) && (tmp->h == tmp2->h)) {
-            //already the right size, just use converted surface as-is
-            SDL_FreeSurface(tmp2);
-            tmp2 = icon;
-            icon = tmp;
-            SDL_FreeSurface(tmp2);
-        } else {
-            //resize converted surface
-            ons_gfx::resizeSurface(tmp, tmp2);
-            SDL_FreeSurface(tmp);
-            tmp = icon;
-            icon = tmp2;
-            SDL_FreeSurface(tmp);
-        }
-#endif //MACOSX || WIN32
         SDL_WM_SetIcon(icon, NULL);
     }
     if (icon)
@@ -588,16 +524,6 @@ void ONScripterLabel::initSDL()
     setStr(&wm_icon_string, DEFAULT_WM_ICON);
     SDL_WM_SetCaption( wm_title_string, wm_icon_string );
 
-#ifdef WIN32
-    //check the audio driver setting
-    char audiodriver[16];
-    SDL_AudioDriverName(audiodriver,16);
-    //fprintf(stderr,"audio driver: %s\n", audiodriver);
-    if ((audiobuffer_size < 8192) &&
-        (strcmp(audiodriver, "waveout") == 0)){
-        audiobuffer_size = 8192; //minimum buffer size for waveout
-    }
-#endif
     openAudio();
 }
 
@@ -696,9 +622,6 @@ ONScripterLabel::ONScripterLabel()
     cdrom_drive_number = 0;
     audiobuffer_size = DEFAULT_AUDIOBUF;
     match_bgm_audio_flag = false;
-#ifdef WIN32
-    current_user_appdata = false;
-#endif
 
     //init various internal variables
     audio_open_flag = false;
@@ -744,7 +667,7 @@ ONScripterLabel::ONScripterLabel()
     //setting this to let script_h call error message popup routines
     script_h.setOns(this);
     
-#if defined (USE_X86_GFX) && !defined(MACOSX)
+#if defined (USE_X86_GFX)
     // determine what functions the cpu supports (Mion)
     {
         using namespace ons_gfx;
@@ -765,31 +688,6 @@ ONScripterLabel::ONScripterLabel()
                 printf("SSE2 ");
             }
             printf("\n");
-        }
-        setCpufuncs(func);
-    }
-#elif defined (USE_X86_GFX) && defined(MACOSX)
-    // x86 CPU on Mac OS X all support SSE2
-    ons_gfx::setCpufuncs(ons_gfx::CPUF_X86_SSE2);
-    printf("System info: Intel CPU with SSE2 functionality\n");
-#elif defined(USE_PPC_GFX) && defined(MACOSX)
-    // Determine if this PPC CPU supports AltiVec (Roto)
-    {
-        using namespace ons_gfx;
-        unsigned int func = CPUF_NONE;
-        int altivec_present = 0;
-    
-        size_t length = sizeof(altivec_present);
-        int error = sysctlbyname("hw.optional.altivec", &altivec_present, &length, NULL, 0);
-        if(error) {
-            setCpufuncs(CPUF_NONE);
-            return;
-        }
-        if(altivec_present) {
-            func |= CPUF_PPC_ALTIVEC;
-            printf("System info: PowerPC CPU, supports altivec\n");
-        } else {
-            printf("System info: PowerPC CPU, DOES NOT support altivec\n");
         }
         setCpufuncs(func);
     }
@@ -903,13 +801,6 @@ void ONScripterLabel::setWindowMode()
 void ONScripterLabel::setNoLayers()
 {
     use_layers = false;
-}
-#endif
-
-#ifdef WIN32
-void ONScripterLabel::setUserAppData()
-{
-    current_user_appdata = true;
 }
 #endif
 
@@ -1031,37 +922,11 @@ int ONScripterLabel::init()
         //default archive_path is current directory ".", followed by parent ".."
         DirPaths default_path = DirPaths(".");
         default_path.add("..");
-#ifdef MACOSX
-        // On Mac OS X, store archives etc in the application bundle by default,
-        // but also check the application root directory and current directory.
-        if (isBundled()) {
-            archive_path.add(bundleResPath());
-
-            // Now add the application path.
-            char *path = bundleAppPath();
-            if (path) {
-                archive_path.add(path);
-                // add the next directory up as a fallback.
-                char tmp[strlen(path) + 4];
-                sprintf(tmp, "%s%c%s", path, DELIMITER, "..");
-                archive_path.add(tmp);
-            } else {
-                //if we couldn't find the application path, we still need
-                //something - use current dir and parent (default)
-                archive_path.add(default_path);
-            }
-        }
-        else {
-            // Not in a bundle: just use current dir and parent as normal.
-            archive_path.add(default_path);
-        }
-#else
         // On Linux, the path is unpredictable and should be set by
         // using "-r PATH" or "--root PATH" in a launcher script.
         // On other platforms it's the same place as the executable.
         archive_path.add(default_path);
         //printf("init:archive_paths: \"%s\"\n", archive_path->get_all_paths());
-#endif
     }
     
     if (key_exe_file){
@@ -1080,43 +945,7 @@ int ONScripterLabel::init()
             gameid=(char*)&gamename;
             snprintf(gameid, 20, "ONScripter-%x", script_h.game_hash);
         }
-#ifdef WIN32
-        // On Windows, store in [Profiles]/All Users/Application Data.
-        // Permit saves to be per-user rather than shared if
-        // option --current-user-appdata is specified
-        HMODULE shdll = LoadLibrary("shfolder");
-        if (shdll) {
-            GETFOLDERPATH gfp = GETFOLDERPATH(GetProcAddress(shdll, "SHGetFolderPathA"));
-            if (gfp) {
-                char hpath[MAX_PATH];
-#define CSIDL_COMMON_APPDATA 0x0023 // for [Profiles]/All Users/Application Data
-#define CSIDL_APPDATA 0x001A // for [Profiles]/[User]/Application Data
-                HRESULT res;
-                if (current_user_appdata)
-                    res = gfp(0, CSIDL_APPDATA, 0, 0, hpath);
-                else
-                    res = gfp(0, CSIDL_COMMON_APPDATA, 0, 0, hpath);
-                if (res != S_FALSE && res != E_FAIL && res != E_INVALIDARG) {
-                    script_h.save_path = new char[strlen(hpath) + strlen(gameid) + 3];
-                    sprintf(script_h.save_path, "%s%c%s%c",
-                            hpath, DELIMITER, gameid, DELIMITER);
-                    CreateDirectory(script_h.save_path, 0);
-                }
-            }
-            FreeLibrary(shdll);
-        }
-        if (script_h.save_path == NULL) {
-            // Error; assume ancient Windows. In this case it's safe
-            // to use the archive path!
-            setSavePath(archive_path.get_path(0));
-        }
-#elif defined MACOSX
-        // On Mac OS X, place in ~/Library/Application Support/<gameid>/
-        char *path;
-        ONSCocoa::getGameAppSupportPath(&path, gameid);
-        setSavePath(path);
-        delete[] path;
-#elif defined LINUX
+#if defined LINUX
         // On Linux (and similar *nixen), place in ~/.gameid
         passwd* pwd = getpwuid(getuid());
         if (pwd) {
@@ -1163,12 +992,6 @@ int ONScripterLabel::init()
         idx++;
     }
 
-#ifdef WIN32
-    if (debug_level > 0) {
-        openDebugFolders();
-    }
-#endif
-
     initSDL();
 
     image_surface = SDL_CreateRGBSurface( SDL_SWSURFACE, 1, 1, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 );
@@ -1203,17 +1026,6 @@ int ONScripterLabel::init()
     char* archive_default_font_otf = create_filepath(archive_path, "default.otf");
     char* archive_default_font_otc = create_filepath(archive_path, "default.otc");
 
-#if defined(MACOSX)
-    char* macos_font_file;
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSString *hiraginoPath = @"/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc";
-    if ([fm fileExistsAtPath:hiraginoPath])
-    {
-        macos_font_file = new char[ strlen([hiraginoPath UTF8String]) + 1 ];
-        strcpy(macos_font_file, [hiraginoPath UTF8String]);
-    }
-#endif
-
     if(file_exists("default.ttf")) font_picker = FONT_DEFAULT_TTF;
     else if(file_exists("default.ttc")) font_picker = FONT_DEFAULT_TTC;
     else if(file_exists("default.otf")) font_picker = FONT_DEFAULT_OTF;
@@ -1222,13 +1034,6 @@ int ONScripterLabel::init()
     else if(file_exists(archive_default_font_ttc)) font_picker = FONT_ARCHIVE_TTC;
     else if(file_exists(archive_default_font_otf)) font_picker = FONT_ARCHIVE_OTF;
     else if(file_exists(archive_default_font_otc)) font_picker = FONT_ARCHIVE_OTC;
-#if defined(WIN32)
-    else if(file_exists("C:\\Windows\\Fonts\\msgothic.ttc")) font_picker = FONT_WIN32_MSGOTHIC_TTC;
-    else if(file_exists("C:\\Windows\\Fonts\\msgothic.ttf")) font_picker = FONT_WIN32_MSGOTHIC_TTF;
-#endif
-#if defined(MACOSX)
-    else if([fm fileExistsAtPath:hiraginoPath]) font_picker = FONT_MACOS_HIRAGINO;
-#endif
 
     switch(font_picker)
     {
@@ -1268,22 +1073,6 @@ int ONScripterLabel::init()
             delete archive_default_font_ttc;
             delete archive_default_font_otf;
             break;
-#if defined(WIN32)
-        case FONT_WIN32_MSGOTHIC_TTC:
-            font_file = create_filepath("", "C:\\Windows\\Fonts\\msgothic.ttc");
-            fprintf( stderr, "no font file detected; using system fallback (MS Gothic)\n" );
-            break;
-        case FONT_WIN32_MSGOTHIC_TTF:
-            font_file = create_filepath("", "C:\\Windows\\Fonts\\msgothic.ttf");
-            fprintf( stderr, "no font file detected; using system fallback (MS Gothic)\n" );
-            break;
-#endif
-#if defined(MACOSX)
-        case FONT_MACOS_HIRAGINO:
-            font_file = macos_font_file;
-            fprintf( stderr, "no font file detected; using system fallback (Hiragino Gothic)\n" );
-            break;
-#endif
         default:
             font_picker = -1;
             break;
@@ -1325,12 +1114,7 @@ int ONScripterLabel::init()
     readToken();
 
     if ( sentence_font.openFont( font_file, screen_ratio1, screen_ratio2 ) == NULL ){
-#if defined(MACOSX)
-        snprintf(script_h.errbuf, MAX_ERRBUF_LEN, "Could not find the font file '%s'.\n"
-                 "Please ensure it is present with the game data.", default_font);
-#else
         snprintf(script_h.errbuf, MAX_ERRBUF_LEN, "Could not find the font file '%s'.", default_font);
-#endif
         errorAndExit(script_h.errbuf, NULL, "Missing font file", true);
         return -1;
     }
@@ -1503,9 +1287,6 @@ void ONScripterLabel::resetFlags()
     key_pressed_flag = false;
     shift_pressed_status = 0;
     ctrl_pressed_status = 0;
-#ifdef MACOSX
-    apple_pressed_status = 0;
-#endif
     display_mode = shelter_display_mode = DISPLAY_MODE_NORMAL;
     event_mode = shelter_event_mode = IDLE_EVENT_MODE;
     did_leavetext = false;
@@ -1612,43 +1393,8 @@ bool ONScripterLabel::doErrorBox( const char *title, const char *errstr, bool is
     //so let's switch to windowed mode just in case
     menu_windowCommand();
 
-#if defined(MACOSX)
-    if (is_simple && !is_warning)
-        ONSCocoa::alertbox(title, errstr);
-    else {
-        if (ONSCocoa::scriptErrorBox(title, errstr, is_warning, ONSCocoa::ENC_SJIS) == SCRIPTERROR_IGNORE)
-            return false;
-    }
-
-#elif defined(WIN32) && defined(USE_MESSAGEBOX)
-    char errtitle[256];
-    HWND pwin = NULL;
-    SDL_SysWMinfo info;
-    UINT mb_type = MB_OK;
-    SDL_VERSION(&info.version);
-    SDL_GetWMInfo(&info);
-
-    if (SDL_GetWMInfo(&info) == 1) {
-        pwin = info.window;
-        snprintf(errtitle, 256, "%s", title);
-    } else {
-        snprintf(errtitle, 256, "ONScripter-EN: %s", title);
-    }
-
-    if (is_warning) {
-        //Retry and Ignore both continue, Abort exits
-        //would rather do an Ignore/Exit button set, oh well
-        mb_type = MB_ABORTRETRYIGNORE|MB_DEFBUTTON3|MB_ICONWARNING;
-    }
-    else
-        mb_type |= MB_ICONERROR;
-    int res = MessageBox(pwin, errstr, errtitle, mb_type);
-    if (is_warning)
-        return (res == IDABORT); //should do exit if got Abort
-#else
     //no errorbox support; at least send the info to stderr
     fprintf(stderr, " ***[Info] %s *** \n%s\n", title, errstr);
-#endif
 
     // get affairs in order
     if (errorsave) {
@@ -1657,48 +1403,11 @@ bool ONScripterLabel::doErrorBox( const char *title, const char *errstr, bool is
         //without exiting if I/O Error
         saveSaveFile( 999, NULL, true );
     }
-#ifdef WIN32
-    openDebugFolders();
-#endif
 
     quit(true);
 
     return true; //should do exit
 }
-
-#ifdef WIN32
-void ONScripterLabel::openDebugFolders()
-{
-    // to make it easier to debug user issues on Windows, open
-    // the current directory, save_path and ONScripter output folders
-    // in Explorer
-    HMODULE shdll = LoadLibrary("shell32");
-    if (shdll) {
-        char hpath[MAX_PATH];
-        bool havefp = false;
-        GETFOLDERPATH gfp = GETFOLDERPATH(GetProcAddress(shdll, "SHGetFolderPathA"));
-        if (gfp) {
-            HRESULT res = gfp(0, CSIDL_APPDATA, 0, 0, hpath); //now user-based
-            if (res != S_FALSE && res != E_FAIL && res != E_INVALIDARG) {
-                havefp = true;
-                sprintf((char *)&hpath + strlen(hpath), "%c%s",
-                        DELIMITER, "ONScripter-EN");
-            }
-        }
-        typedef HINSTANCE (WINAPI *SHELLEXECUTE)(HWND, LPCSTR, LPCSTR,
-                           LPCSTR, LPCSTR, int);
-        SHELLEXECUTE shexec =
-            SHELLEXECUTE(GetProcAddress(shdll, "ShellExecuteA"));
-        if (shexec) {
-            shexec(NULL, "open", "", NULL, NULL, SW_SHOWNORMAL);
-            shexec(NULL, "open", script_h.save_path, NULL, NULL, SW_SHOWNORMAL);
-            if (havefp)
-                shexec(NULL, "open", hpath, NULL, NULL, SW_SHOWNORMAL);
-        }
-        FreeLibrary(shdll);
-    }
-}
-#endif
 
 bool intersectRects( SDL_Rect &result, SDL_Rect rect1, SDL_Rect rect2) {
     if ( (rect1.w == 0) || (rect1.h == 0) ) {

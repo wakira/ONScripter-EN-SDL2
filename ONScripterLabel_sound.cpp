@@ -79,18 +79,11 @@ extern "C"{
     extern void oggcallback( void *userdata, Uint8 *stream, int len );
     extern Uint32 SDLCALL cdaudioCallback( Uint32 interval, void *param );
     extern Uint32 SDLCALL silentmovieCallback( Uint32 interval, void *param );
-#if defined(MACOSX) //insani
-    extern Uint32 SDLCALL seqmusicSDLCallback( Uint32 interval, void *param );
-#endif
 }
 extern void seqmusicCallback( int sig );
 extern void musicCallback( int sig );
 extern SDL_TimerID timer_cdaudio_id;
 extern SDL_TimerID timer_silentmovie_id;
-
-#if defined(MACOSX) //insani
-extern SDL_TimerID timer_seqmusic_id;
-#endif
 
 #define TMP_SEQMUSIC_FILE "tmp.mus"
 #define TMP_MUSIC_FILE "tmp.mus"
@@ -592,14 +585,7 @@ int ONScripterLabel::playSequencedMusic(bool loop_flag)
 #endif
 
     Mix_VolumeMusic(!volume_on_flag? 0 : music_volume);
-#if defined(MACOSX) //insani
-    // Emulate looping on MacOS ourselves to work around bug in SDL_Mixer
-    seqmusic_looping = 0;
     Mix_PlayMusic(seqmusic_info, seqmusic_looping);
-    timer_seqmusic_id = SDL_AddTimer(1000, seqmusicSDLCallback, NULL);
-#else
-    Mix_PlayMusic(seqmusic_info, seqmusic_looping);
-#endif
     current_cd_track = -2;
 
     return 0;
@@ -973,10 +959,6 @@ void ONScripterLabel::stopBGM( bool continue_flag )
     }
 
     if ( seqmusic_info ){
-
-#if defined(MACOSX) //insani
-        clearTimer( timer_seqmusic_id );
-#endif
 
         ext_music_play_once_flag = true;
         Mix_HaltMusic();

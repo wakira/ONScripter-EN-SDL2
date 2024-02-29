@@ -22,26 +22,20 @@ int main( int argc, char **argv )
             if (argc < 3)
                 argc = -1;
             else {
-#ifndef WIN32
                 if (strcmp(argv[1], "-")) {
                     // "-" arg means "use stdout"
-#endif
                     out_filename = argv[1];
-#ifndef WIN32
                 } else {
                     use_stdout = true;
                 }
-#endif
                 argc--;
                 argv++;
             }
         }
-#ifndef WIN32
         if ((argc > 1) && !strcmp(argv[1], "-")) {
             // "-" arg means "use stdin"
             use_stdin = true;
         }
-#endif
     } else
         argc = -1;
     if (argc < 0) {

@@ -10,25 +10,17 @@ int main( int argc, char **argv )
     bool use_stdout = false;
     
     if ( (argc == 2) || (argc == 3) ) {
-#ifndef WIN32
         if (strcmp(argv[1], "-")) {
             // "-" arg means "use stdin"
-#endif
             in_filename = argv[1];
-#ifndef WIN32
         }
-#endif
         if (argc == 3) {
-#ifndef WIN32
             if (strcmp(argv[2], "-")) {
                 // "-" arg means "use stdout"
-#endif
                 out_filename = argv[2];
-#ifndef WIN32
             } else {
                 use_stdout = true;
             }
-#endif
         }
     }
     else {
@@ -67,9 +59,6 @@ int main( int argc, char **argv )
         ch ^= 0x84;
         last_was_newline = false;
         if ((ch == '\r') || ((ch == '\n') && (last_ch != '\r'))) {
-#ifdef WIN32
-            fputc('\r', out_fp);
-#endif
             fputc('\n', out_fp);
             last_was_newline = true;
         } else
@@ -80,9 +69,6 @@ int main( int argc, char **argv )
 
     //throw in an ending newline if there wasn't one
     if (!last_was_newline) {
-#ifdef WIN32
-        fputc('\r', out_fp);
-#endif
         fputc('\n', out_fp);
     }
 

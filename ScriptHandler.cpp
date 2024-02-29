@@ -44,10 +44,6 @@
 #include "ONScripterLabel.h" //so this can call doErrorBox
 #include <sys/stat.h>
 #include <sys/types.h>
-#ifdef WIN32
-#include <direct.h>
-#include <windows.h>
-#endif
 
 #define TMP_SCRIPT_BUF_LEN 4096
 #define STRING_BUFFER_LENGTH 2048
@@ -261,9 +257,7 @@ void ScriptHandler::setSavedir( const char *dir )
     savedir = new char[ strlen(dir) + strlen(save_path) + 2];
     sprintf( savedir, "%s%s%c", save_path, dir, DELIMITER );
     mkdir(savedir
-#ifndef WIN32
           , 0755
-#endif
          );
 }
 
@@ -1616,25 +1610,9 @@ int ScriptHandler::readScript( DirPaths &path )
         n++;
     }
     if (fp == NULL){
-#if defined(MACOSX) 
-        // Why is the mac version like this? Why does it have 4 stirng
-        // arguments?? -Galladite 2023-6-15
-        /*
-        simpleErrorAndExit("No game data found.\nThis application must be run "
-                           "from a directory containing ONScripter game data.",
-                           "can't open any of 0.txt, 00.txt, 0.utf, 00.utf, 0.utf.txt, 00.utf.txt, nscript.dat, or pscript.dat",
-                           "Missing game data");
-        */
-
-        // I'll just change it and hope it doesn't break.
         simpleErrorAndExit("No game script found.",
                            "can't open any of 0.txt, 00.txt, 0.utf, 00.utf, 0.utf.txt, 00.utf.txt, nscript.dat, or pscript.dat",
                            "Missing game data");
-#else
-        simpleErrorAndExit("No game script found.",
-                           "can't open any of 0.txt, 00.txt, 0.utf, 00.utf, 0.utf.txt, 00.utf.txt, nscript.dat, or pscript.dat",
-                           "Missing game data");
-#endif
         return -1;
     }
 
